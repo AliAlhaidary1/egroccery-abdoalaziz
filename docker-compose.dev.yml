@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # خادم الويب (PHP + Apache) للتطوير
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: omnimart_app_dev
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=omnimart
+      - DB_USERNAME=omnimart_user
+      - DB_PASSWORD=omnimart_password
+    depends_on:
+      - db
+    networks:
+      - omnimart_network
+    command: >
+      sh -c "
+        if [ ! -f core/.env ]; then
+          if [ -f core/.env.example ]; then
+            cp core/.env.example core/.env
+          fi
+        fi &&
+        composer install || true &&
+        cd core && composer install || true &&
+        cd core && npm install || true &&
+        cd core && php artisan key:generate --force || true &&
+        cd core && php artisan storage:link || true &&
+        apache2-foreground
+      "
+
+  # قاعدة البيانات MySQL
+  db:
+    image: mysql:8.0
+    container_name: omnimart_db_dev
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: omnimart
+      MYSQL_USER: omnimart_user
+      MYSQL_PASSWORD: omnimart_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data_dev:/var/lib/mysql
+    networks:
+      - omnimart_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Vite Development Server
+  vite:
+    image: node:18-alpine
+    container_name: omnimart_vite_dev
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./core:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host"
+    networks:
+      - omnimart_network
+    depends_on:
+      - app
+
+volumes:
+  db_data_dev:
+    driver: local
+
+networks:
+  omnimart_network:
+    driver: bridge
+
