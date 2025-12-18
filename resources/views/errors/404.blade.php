@@ -11,7 +11,7 @@
             <div class="row">
                 <div class="col-lg-12">
                     <ul class="breadcrumbs">
-                        <li><a href="{{ route('front.index') }}">{{ __('Home') }}</a> </li>
+                        <li><a href="{{ Route::has('front.index') ? route('front.index') : url('/') }}">{{ __('Home') }}</a> </li>
                         <li class="separator"></li>
                         <li>{{ __('404 | Not Found') }}</li>
                     </ul>
@@ -30,7 +30,7 @@
                 <p class="text">
                   {{ __('The resource request could not be found on this server !') }}
                 </p>
-                <a href="{{ route('front.index') }}">
+                <a href="{{ Route::has('front.index') ? route('front.index') : url('/') }}">
                   <button class="btn btn-primary">
                     <span>{{ __('Back Home') }}</span>
                   </button>

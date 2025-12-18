@@ -11,6 +11,11 @@ class Security
 {
     public function handle($request, Closure $next)
     {  
+        // Skip security check for installer routes
+        if ($request->is('install*') || $request->is('update*')) {
+            return $next($request);
+        }
+        
         $securityDataSession = Session::get('securityData');
         
         if($securityDataSession && ($securityDataSession['status'] == 'not_verified' || $securityDataSession['status'] == 'multiple_domain')){

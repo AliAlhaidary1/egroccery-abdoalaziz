@@ -8,12 +8,27 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libzip-dev \
     zip \
     unzip \
     nodejs \
     npm \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    netcat-openbsd \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# تثبيت IMAP - تثبيت المكتبات المطلوبة من مستودع bookworm
+RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/bookworm.list \
+    && apt-get update \
+    && apt-get install -y --allow-downgrades \
+        libc-client-dev/bookworm \
+        libkrb5-dev/bookworm \
+        libkrb5-3/bookworm \
+        libk5crypto3/bookworm \
+        libgssapi-krb5-2/bookworm \
+    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+    && docker-php-ext-install imap \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/bookworm.list
 
 # تثبيت Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -24,28 +39,19 @@ RUN a2enmod rewrite
 # تعيين مجلد العمل
 WORKDIR /var/www/html
 
-# نسخ ملفات المشروع
-COPY . /var/www/html
-
-# تثبيت مكتبات PHP
-RUN composer install --no-dev --optimize-autoloader
-
-# تثبيت مكتبات Node.js
-RUN cd core && npm install && npm run build
-
-# تعيين الصلاحيات
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
-
 # تعيين Apache DocumentRoot إلى public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+RUN sed -ri -e 's!<Directory /var/www/>!<Directory ${APACHE_DOCUMENT_ROOT}>!g' /etc/apache2/apache2.conf
+RUN sed -ri -e 's!<Directory /var/www/html>!<Directory ${APACHE_DOCUMENT_ROOT}>!g' /etc/apache2/apache2.conf
 
 # فتح المنفذ 80
 EXPOSE 80
 
-# تشغيل Apache
+# نسخ سكريبت التهيئة
+COPY docker-init.sh /var/www/html/
+RUN chmod +x /var/www/html/docker-init.sh
+
 CMD ["apache2-foreground"]
 

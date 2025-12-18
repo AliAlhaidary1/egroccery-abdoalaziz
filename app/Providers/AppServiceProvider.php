@@ -12,16 +12,20 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        view()->composer('*', function ($view) {
-            $view->with('setting', (object)[
-                'cookie_text' => 'This is a demo cookie text.',
-            ]);
-        });
+        Paginator::useBootstrap();
+        view()->composer('*', function ($settings) {
+            $settings->with('setting', DB::table('settings')->find(1));
+            $settings->with('extra_settings', DB::table('extra_settings')->find(1));
+            $settings->with('menus', DB::table('menus')->find(1));
 
-        if (!file_exists('core/storage/installed') && !request()->is('install') && !request()->is('install/*')) {
-         
-            header("Location: install/");
-            exit;
-        }
+            if (!session()->has('popup')) {
+                view()->share('visit', 1);
+            }
+            session()->put('popup', 1);
+        });
+    }
+
+    public function register()
+    {
     }
 }

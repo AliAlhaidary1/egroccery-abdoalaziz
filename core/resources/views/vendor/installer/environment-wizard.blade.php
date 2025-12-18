@@ -11,12 +11,6 @@
 
 @section('container')
     <div class="tabs tabs-full">
-        @if(session()->has('license_success'))
-            <div class="alert alert-success" style="background-color: #d4edda;" id="license_alert">
-                <p style="margin-bottom: 0px;color: #155724;">{{session()->get('license_success')}}</p>
-            </div>
-        @endif
-
         @if(session()->has('domin_url'))
             <div class="alert alert-success" style="background-color: #d4edda;" id="license_alert">
                 <strong>This Purchase Code Already Use for other Domin :</strong>
